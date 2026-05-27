@@ -3474,7 +3474,6 @@ const GITHUB_REPO = 'https://github.com/GoDiao/dreamcoder'
 const GITHUB_ISSUES = `${GITHUB_REPO}/issues`
 const GITHUB_RELEASES = `${GITHUB_REPO}/releases`
 const AUTHOR_GITHUB = 'https://github.com/GoDiao'
-const SOCIAL_LINKS = [] as const
 
 function isValidHttpProxyUrl(value: string) {
   try {
@@ -3662,26 +3661,6 @@ function AboutSettings() {
           <span className="text-xs text-[var(--color-text-tertiary)] ml-auto">GitHub</span>
         </button>
       </div>
-
-      {/* Social Media */}
-      {SOCIAL_LINKS.length > 0 && (
-      <div className="w-full mt-4">
-        <h3 className="text-xs font-medium text-[var(--color-text-tertiary)] uppercase tracking-wider mb-3">{t('settings.about.socialMedia')}</h3>
-        <div className="flex flex-col gap-0.5">
-          {SOCIAL_LINKS.map((link) => (
-            <button
-              key={link.name}
-              onClick={() => openUrl(link.url)}
-              className="w-full flex items-center gap-3 px-4 py-2.5 rounded-lg hover:bg-[var(--color-surface-hover)] transition-colors cursor-pointer"
-            >
-              <img src={link.icon} alt={link.name} className="w-4 h-4 opacity-60" />
-              <span className="text-sm text-[var(--color-text-primary)]">{link.label}</span>
-              <span className="text-xs text-[var(--color-text-tertiary)] ml-auto">{link.name}</span>
-            </button>
-          ))}
-        </div>
-      </div>
-      )}
 
       <div className="mt-6 w-full">
         <button
