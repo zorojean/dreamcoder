@@ -728,16 +728,7 @@ function buildFallbackPreset(provider?: SavedProvider): ProviderPreset {
   }
 }
 
-function openExternalUrl(url: string) {
-  if (!isTauriRuntime()) {
-    window.open(url, '_blank', 'noopener,noreferrer')
-    return
-  }
-
-  void import('@tauri-apps/plugin-shell')
-    .then((mod) => mod.open(url))
-    .catch(() => window.open(url, '_blank', 'noopener,noreferrer'))
-}
+import { openExternalUrl } from '../lib/externalUrl'
 
 function ProviderFormModal({ open, onClose, mode, provider, presets }: ProviderFormProps) {
   const { createProvider, updateProvider, testConfig } = useProviderStore()
