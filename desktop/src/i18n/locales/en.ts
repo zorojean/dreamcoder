@@ -1489,7 +1489,7 @@ export const en = {
   'scheduledPage.colNextExecution': 'Next Execution',
   'scheduledPage.colActions': 'Actions',
   'scheduledPage.endOfList': 'End of scheduled list',
-  'scheduledPage.pausedTasks': '9 other tasks are currently paused or disabled for maintenance.',
+  'scheduledPage.pausedTasks': '{{count}} other tasks are currently paused or disabled for maintenance.',
   'scheduledPage.recentLogs': 'Recent Output Logs',
   'scheduledPage.viewArtifacts': 'View Full Artifacts',
   'scheduledPage.resourceAllocation': 'Resource Allocation',

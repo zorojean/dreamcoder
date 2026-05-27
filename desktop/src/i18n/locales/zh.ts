@@ -1491,7 +1491,7 @@ export const zh: Record<TranslationKey, string> = {
   'scheduledPage.colNextExecution': '下次执行',
   'scheduledPage.colActions': '操作',
   'scheduledPage.endOfList': '任务列表结束',
-  'scheduledPage.pausedTasks': '另有 9 个任务当前已暂停或因维护而禁用。',
+  'scheduledPage.pausedTasks': '另有 {{count}} 个任务当前已暂停或因维护而禁用。',
   'scheduledPage.recentLogs': '最近输出日志',
   'scheduledPage.viewArtifacts': '查看完整产物',
   'scheduledPage.resourceAllocation': '资源分配',
