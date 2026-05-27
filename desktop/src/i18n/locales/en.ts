@@ -747,6 +747,12 @@ export const en = {
   'settings.about.updatesDesc': 'Check GitHub Releases, download the installer, and relaunch after install.',
   'settings.about.updatesNotAvailable': 'The first public release has not been published yet. Update checking is disabled.',
 
+  // Settings > Notifications
+  'notifications.agentCompleted.title': 'DreamCoder has finished responding',
+  'notifications.permissionPrompt.title': 'DreamCoder needs your confirmation',
+  'notifications.permissionPrompt.toolBody': '{toolName} is requesting execution, waiting for permission.',
+  'notifications.permissionPrompt.computerUseBody': 'Computer Use is waiting for permission.',
+
   // Settings > Computer Use
   'settings.tab.computerUse': 'Computer Use',
   'settings.computerUse.title': 'Computer Use',
