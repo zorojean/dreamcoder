@@ -27,7 +27,7 @@ const config: Config = {
           editUrl: 'https://github.com/GoDiao/dreamcoder/tree/master/website/',
         },
         theme: {
-          customCss: './src/css/custom.css',
+          customCss: ['./src/css/custom.css', './src/css/docs.css'],
         },
       } satisfies Preset.Options,
     ],
@@ -44,8 +44,8 @@ const config: Config = {
   themeConfig: {
     image: 'img/docusaurus-social-card.jpg',
     colorMode: {
-      defaultMode: 'dark', // 默认夜间模式
-      respectPrefersColorScheme: true, // 尊崇系统主题
+      defaultMode: 'light', // 奶油画布风格
+      switchConfig: {},
     },
     navbar: {
       title: 'DreamCoder',
@@ -70,6 +70,7 @@ const config: Config = {
     prism: {
       theme: prismThemes.github,
       darkTheme: prismThemes.dracula,
+      additionalLanguages: ['mermaid'],
     },
   } satisfies Preset.Config,
 };
