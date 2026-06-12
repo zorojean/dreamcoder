@@ -1,77 +1,68 @@
+import { useId } from 'react'
+
 export function DreamCoderIcon({ size = 32, className }: { size?: number; className?: string }) {
+  const id = useId().replace(/:/g, '')
+
   return (
     <svg
-      viewBox="0 0 512 512"
+      viewBox="0 0 1024 1024"
       width={size}
       height={size}
       className={className}
       style={{ flexShrink: 0 }}
+      role="img"
+      aria-label="DreamCoder"
     >
       <defs>
-        <linearGradient id="dc-bg" x1="0%" y1="0%" x2="100%" y2="100%">
-          <stop offset="0%" stopColor="var(--color-surface-container-lowest)" />
-          <stop offset="100%" stopColor="var(--color-surface)" />
+        <linearGradient id={`${id}-dc-bg`} x1="112" y1="80" x2="912" y2="944" gradientUnits="userSpaceOnUse">
+          <stop offset="0" stopColor="#fffbef" />
+          <stop offset="0.48" stopColor="#f4fbf3" />
+          <stop offset="1" stopColor="#e5f4f0" />
         </linearGradient>
-        <linearGradient id="dc-main" x1="0%" y1="0%" x2="100%" y2="100%">
-          <stop offset="0%" stopColor="var(--color-primary-fixed-dim)" />
-          <stop offset="100%" stopColor="var(--color-primary-container)" />
+        <linearGradient id={`${id}-dc-mark`} x1="248" y1="224" x2="740" y2="804" gradientUnits="userSpaceOnUse">
+          <stop offset="0" stopColor="#1d322b" />
+          <stop offset="1" stopColor="#335d50" />
         </linearGradient>
-        <linearGradient id="dc-sparkle" x1="0%" y1="0%" x2="100%" y2="100%">
-          <stop offset="0%" stopColor="var(--color-primary-fixed)" />
-          <stop offset="100%" stopColor="var(--color-primary)" />
+        <linearGradient id={`${id}-dc-code`} x1="400" y1="360" x2="640" y2="644" gradientUnits="userSpaceOnUse">
+          <stop offset="0" stopColor="#00a6a6" />
+          <stop offset="1" stopColor="#16b973" />
         </linearGradient>
-        <filter id="dc-shadow" x="-5%" y="-5%" width="110%" height="115%">
-          <feDropShadow dx="0" dy="6" stdDeviation="10" floodColor="var(--color-primary)" floodOpacity="0.15" />
-        </filter>
-        <filter id="dc-glow">
-          <feGaussianBlur in="SourceGraphic" stdDeviation="3" result="b" />
-          <feMerge><feMergeNode in="b" /><feMergeNode in="SourceGraphic" /></feMerge>
+        <linearGradient id={`${id}-dc-gold`} x1="620" y1="260" x2="730" y2="686" gradientUnits="userSpaceOnUse">
+          <stop offset="0" stopColor="#ffe07a" />
+          <stop offset="1" stopColor="#f28a3d" />
+        </linearGradient>
+        <filter id={`${id}-dc-shadow`} x="8%" y="8%" width="84%" height="88%" colorInterpolationFilters="sRGB">
+          <feDropShadow dx="0" dy="24" stdDeviation="28" floodColor="#10241e" floodOpacity="0.16" />
         </filter>
       </defs>
 
-      {/* Background */}
-      <rect width="512" height="512" rx="112" fill="url(#dc-bg)" />
-      <rect x="6" y="6" width="500" height="500" rx="108" fill="none" stroke="var(--color-primary)" strokeWidth="2.5" strokeOpacity="0.18" />
+      <rect width="1024" height="1024" rx="220" fill={`url(#${id}-dc-bg)`} />
+      <rect x="28" y="28" width="968" height="968" rx="198" fill="none" stroke="#1d322b" strokeWidth="8" strokeOpacity="0.08" />
 
-      {/* Terminal chevron */}
-      <g filter="url(#dc-shadow)">
-        <polyline
-          points="168,174 296,256 168,338"
+      <g filter={`url(#${id}-dc-shadow)`}>
+        <path d="M335 248v528" fill="none" stroke={`url(#${id}-dc-mark)`} strokeWidth="82" strokeLinecap="round" />
+        <path
+          d="M335 248c244 0 394 102 394 264S579 776 335 776"
           fill="none"
-          stroke="url(#dc-main)"
-          strokeWidth="52"
+          stroke={`url(#${id}-dc-mark)`}
+          strokeWidth="82"
+          strokeLinecap="round"
+        />
+
+        <path
+          d="M444 386 572 512 444 638"
+          fill="none"
+          stroke={`url(#${id}-dc-code)`}
+          strokeWidth="70"
           strokeLinecap="round"
           strokeLinejoin="round"
         />
+        <path d="M604 656h112" fill="none" stroke={`url(#${id}-dc-gold)`} strokeWidth="58" strokeLinecap="round" />
+
+        <path d="M703 292c8 36 28 56 64 64-36 8-56 28-64 64-8-36-28-56-64-64 36-8 56-28 64-64z" fill={`url(#${id}-dc-gold)`} />
+        <circle cx="258" cy="284" r="18" fill="#00a6a6" opacity="0.28" />
+        <circle cx="765" cy="724" r="20" fill="#f2a541" opacity="0.34" />
       </g>
-
-      {/* Cursor bar */}
-      <rect x="296" y="318" width="88" height="36" rx="18" fill="url(#dc-main)" opacity="0.85" />
-
-      {/* Large sparkle */}
-      <g filter="url(#dc-glow)" transform="translate(358, 148)">
-        <ellipse rx="9" ry="38" fill="url(#dc-sparkle)" opacity="0.95" />
-        <ellipse rx="38" ry="9" fill="url(#dc-sparkle)" opacity="0.95" />
-        <ellipse rx="6" ry="26" fill="url(#dc-sparkle)" opacity="0.7" transform="rotate(45)" />
-        <ellipse rx="6" ry="26" fill="url(#dc-sparkle)" opacity="0.7" transform="rotate(-45)" />
-      </g>
-
-      {/* Small sparkle */}
-      <g filter="url(#dc-glow)" transform="translate(400, 310)" opacity="0.55">
-        <ellipse rx="5" ry="20" fill="var(--color-primary)" />
-        <ellipse rx="20" ry="5" fill="var(--color-primary)" />
-        <ellipse rx="3.5" ry="14" fill="var(--color-primary)" transform="rotate(45)" />
-        <ellipse rx="3.5" ry="14" fill="var(--color-primary)" transform="rotate(-45)" />
-      </g>
-
-      {/* Dot accents */}
-      <circle cx="148" cy="152" r="10" fill="var(--color-primary-fixed)" opacity="0.5" />
-      <circle cx="130" cy="172" r="5.5" fill="var(--color-primary-fixed-dim)" opacity="0.35" />
-      <circle cx="200" cy="390" r="7" fill="var(--color-primary-fixed)" opacity="0.4" />
-      <circle cx="178" cy="375" r="4" fill="var(--color-primary-fixed-dim)" opacity="0.3" />
-
-      {/* Outer stroke */}
-      <rect width="512" height="512" rx="112" fill="none" stroke="var(--color-primary-fixed)" strokeWidth="3" />
     </svg>
   )
 }

@@ -9,6 +9,13 @@ const mocks = vi.hoisted(() => ({
   isTauriRuntime: false,
   isMobile: false,
   fetchAll: vi.fn(),
+  fetchProviders: vi.fn(),
+  fetchAuthStatus: vi.fn(),
+  onboardingCompleted: true,
+  providerState: {
+    providers: [{ id: 'provider-1' }] as unknown[],
+    hasLoadedProviders: true,
+  },
   restoreTabs: vi.fn(),
   connectToSession: vi.fn(),
   setActiveTab: vi.fn(),
@@ -26,8 +33,32 @@ vi.mock('../../lib/desktopRuntime', () => ({
 }))
 
 vi.mock('../../stores/settingsStore', () => ({
-  useSettingsStore: (selector: (state: { fetchAll: typeof mocks.fetchAll }) => unknown) =>
-    selector({ fetchAll: mocks.fetchAll }),
+  useSettingsStore: (selector: (state: {
+    fetchAll: typeof mocks.fetchAll
+    onboardingCompleted: boolean
+  }) => unknown) =>
+    selector({ fetchAll: mocks.fetchAll, onboardingCompleted: mocks.onboardingCompleted }),
+}))
+
+vi.mock('../../stores/providerStore', () => ({
+  useProviderStore: (selector?: (state: {
+    providers: unknown[]
+    hasLoadedProviders: boolean
+    fetchProviders: typeof mocks.fetchProviders
+  }) => unknown) => {
+    const state = {
+      providers: mocks.providerState.providers,
+      hasLoadedProviders: mocks.providerState.hasLoadedProviders,
+      fetchProviders: mocks.fetchProviders,
+    }
+    return selector ? selector(state) : state
+  },
+}))
+
+vi.mock('../../api/providers', () => ({
+  providersApi: {
+    authStatus: mocks.fetchAuthStatus,
+  },
 }))
 
 vi.mock('../../hooks/useMobileViewport', () => ({
@@ -98,6 +129,10 @@ vi.mock('./H5ConnectionView', () => ({
   ),
 }))
 
+vi.mock('../onboarding/ProviderOnboarding', () => ({
+  ProviderOnboarding: () => <div>provider onboarding</div>,
+}))
+
 vi.mock('../shared/Toast', () => ({
   ToastContainer: () => null,
 }))
@@ -115,6 +150,13 @@ describe('AppShell boot flow', () => {
     mocks.isMobile = false
     mocks.initializeDesktopServerUrl.mockResolvedValue('http://127.0.0.1:3456')
     mocks.fetchAll.mockResolvedValue(undefined)
+    mocks.fetchProviders.mockResolvedValue(undefined)
+    mocks.fetchAuthStatus.mockResolvedValue({ hasAuth: true, source: 'original-settings' })
+    mocks.onboardingCompleted = true
+    mocks.providerState = {
+      providers: [{ id: 'provider-1' }],
+      hasLoadedProviders: true,
+    }
     mocks.restoreTabs.mockResolvedValue(undefined)
     mocks.setActiveTab.mockImplementation((sessionId: string) => {
       mocks.tabState.activeTabId = sessionId
@@ -225,6 +267,42 @@ describe('AppShell boot flow', () => {
     await screen.findByText('sidebar loaded')
     expect(mocks.initializeDesktopServerUrl).toHaveBeenCalledTimes(2)
     expect(mocks.fetchAll).toHaveBeenCalledTimes(1)
+    expect(mocks.fetchProviders).toHaveBeenCalledTimes(1)
+    expect(mocks.fetchAuthStatus).toHaveBeenCalledTimes(1)
+  })
+
+  it('skips provider onboarding when original settings already provide auth', async () => {
+    mocks.onboardingCompleted = false
+    mocks.providerState = {
+      providers: [],
+      hasLoadedProviders: true,
+    }
+    mocks.fetchAuthStatus.mockResolvedValueOnce({
+      hasAuth: true,
+      source: 'original-settings',
+    })
+
+    render(<AppShell />)
+
+    expect(await screen.findByText('sidebar loaded')).toBeInTheDocument()
+    expect(screen.queryByText('provider onboarding')).not.toBeInTheDocument()
+  })
+
+  it('shows provider onboarding when no providers or auth are configured', async () => {
+    mocks.onboardingCompleted = false
+    mocks.providerState = {
+      providers: [],
+      hasLoadedProviders: true,
+    }
+    mocks.fetchAuthStatus.mockResolvedValueOnce({
+      hasAuth: false,
+      source: 'none',
+    })
+
+    render(<AppShell />)
+
+    expect(await screen.findByText('provider onboarding')).toBeInTheDocument()
+    expect(screen.queryByText('sidebar loaded')).not.toBeInTheDocument()
   })
 
   it('keeps the Tauri startup error path unchanged', async () => {

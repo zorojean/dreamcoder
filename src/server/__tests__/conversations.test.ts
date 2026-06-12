@@ -714,6 +714,21 @@ describe('WebSocket Chat Integration', () => {
     }
   }
 
+  async function withMockFailOnResume<T>(callback: () => Promise<T>): Promise<T> {
+    const previous = process.env.MOCK_SDK_FAIL_ON_RESUME
+    process.env.MOCK_SDK_FAIL_ON_RESUME = '1'
+
+    try {
+      return await callback()
+    } finally {
+      if (previous === undefined) {
+        delete process.env.MOCK_SDK_FAIL_ON_RESUME
+      } else {
+        process.env.MOCK_SDK_FAIL_ON_RESUME = previous
+      }
+    }
+  }
+
   async function runTurn(sessionId: string, content: string, allowError = false): Promise<any[]> {
     const messages: any[] = []
     const ws = new WebSocket(`${wsUrl}/ws/${sessionId}`)
@@ -1466,6 +1481,38 @@ describe('WebSocket Chat Integration', () => {
     const secondTurn = await runTurn(sessionId, 'reply with second')
     expect(secondTurn.some((m) => m.type === 'message_complete')).toBe(true)
     expect(secondTurn.some((m) => m.type === 'error')).toBe(false)
+  })
+
+  it('does not resume historical transcript context for a fresh desktop turn', async () => {
+    const { sessionId } = await sessionService.createSession(process.cwd())
+    const launchInfo = await sessionService.getSessionLaunchInfo(sessionId)
+    expect(launchInfo).toBeTruthy()
+
+    await fs.appendFile(
+      launchInfo!.filePath,
+      [
+        JSON.stringify({
+          type: 'user',
+          uuid: crypto.randomUUID(),
+          message: { role: 'user', content: 'old question' },
+          timestamp: new Date().toISOString(),
+        }),
+        JSON.stringify({
+          type: 'assistant',
+          uuid: crypto.randomUUID(),
+          message: { role: 'assistant', content: [{ type: 'text', text: 'old answer' }] },
+          timestamp: new Date().toISOString(),
+        }),
+        '',
+      ].join('\n'),
+      'utf-8',
+    )
+
+    await withMockFailOnResume(async () => {
+      const messages = await runTurn(sessionId, 'fresh question without historical context')
+      expect(messages.some((m) => m.type === 'message_complete')).toBe(true)
+      expect(messages.some((m) => m.type === 'error')).toBe(false)
+    })
   })
 
   it('should keep a long desktop session alive in a /tmp project across engineering turns', async () => {

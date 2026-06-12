@@ -3,10 +3,15 @@ import { isThemeMode, THEME_MODES, type ThemeMode } from '../types/settings'
 
 const THEME_STORAGE_KEY = 'dreamcoder-theme'
 const SIDEBAR_WIDTH_STORAGE_KEY = 'dreamcoder-sidebar-width'
+const SYSTEM_DARK_THEME_QUERY = '(prefers-color-scheme: dark)'
 
 export const SIDEBAR_MIN_WIDTH = 220
 export const SIDEBAR_MAX_WIDTH = 400
 export const SIDEBAR_DEFAULT_WIDTH = 280
+
+type ResolvedThemeMode = Exclude<ThemeMode, 'system'>
+const DARK_COLOR_SCHEME_THEMES = new Set<ResolvedThemeMode>(['dark', 'midnight'])
+let stopSystemThemeListener: (() => void) | null = null
 
 function getStoredSidebarWidth(): number {
   try {
@@ -27,14 +32,59 @@ function getStoredTheme(): ThemeMode {
   return 'white'
 }
 
+function resolveSystemTheme(): ResolvedThemeMode {
+  if (typeof window === 'undefined' || typeof window.matchMedia !== 'function') return 'white'
+  return window.matchMedia(SYSTEM_DARK_THEME_QUERY).matches ? 'dark' : 'white'
+}
+
+export function resolveTheme(theme: ThemeMode): ResolvedThemeMode {
+  return theme === 'system' ? resolveSystemTheme() : theme
+}
+
 export function applyTheme(theme: ThemeMode) {
   if (typeof document === 'undefined') return
-  document.documentElement.setAttribute('data-theme', theme)
-  document.documentElement.style.colorScheme = theme === 'dark' ? 'dark' : 'light'
+  const resolvedTheme = resolveTheme(theme)
+  document.documentElement.setAttribute('data-theme', resolvedTheme)
+  document.documentElement.setAttribute('data-theme-preference', theme)
+  document.documentElement.style.colorScheme = DARK_COLOR_SCHEME_THEMES.has(resolvedTheme) ? 'dark' : 'light'
+}
+
+function handleSystemThemeChange() {
+  if (useUIStore.getState().theme === 'system') {
+    applyTheme('system')
+  }
+}
+
+function startSystemThemeListener() {
+  if (stopSystemThemeListener || typeof window === 'undefined' || typeof window.matchMedia !== 'function') return
+
+  const mediaQuery = window.matchMedia(SYSTEM_DARK_THEME_QUERY)
+  if (typeof mediaQuery.addEventListener === 'function') {
+    mediaQuery.addEventListener('change', handleSystemThemeChange)
+    stopSystemThemeListener = () => mediaQuery.removeEventListener('change', handleSystemThemeChange)
+    return
+  }
+
+  if (typeof mediaQuery.addListener === 'function') {
+    mediaQuery.addListener(handleSystemThemeChange)
+    stopSystemThemeListener = () => mediaQuery.removeListener(handleSystemThemeChange)
+  }
+}
+
+function syncSystemThemeListener(theme: ThemeMode) {
+  if (theme === 'system') {
+    startSystemThemeListener()
+    return
+  }
+
+  stopSystemThemeListener?.()
+  stopSystemThemeListener = null
 }
 
 export function initializeTheme() {
-  applyTheme(getStoredTheme())
+  const theme = getStoredTheme()
+  applyTheme(theme)
+  syncSystemThemeListener(theme)
 }
 
 export type Toast = {
@@ -101,6 +151,7 @@ export const useUIStore = create<UIStore>((set) => ({
 
   setTheme: (theme) => {
     applyTheme(theme)
+    syncSystemThemeListener(theme)
     try { localStorage.setItem(THEME_STORAGE_KEY, theme) } catch { /* noop */ }
     set({ theme })
   },
@@ -110,6 +161,7 @@ export const useUIStore = create<UIStore>((set) => ({
       const currentIndex = THEME_MODES.indexOf(state.theme)
       const next = THEME_MODES[(currentIndex + 1) % THEME_MODES.length] ?? 'white'
       applyTheme(next)
+      syncSystemThemeListener(next)
       try { localStorage.setItem(THEME_STORAGE_KEY, next) } catch { /* noop */ }
       return { theme: next }
     })

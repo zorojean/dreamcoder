@@ -14,7 +14,7 @@ type ProvidersResponse = { providers: SavedProvider[]; activeId: string | null }
 type ProviderResponse = { provider: SavedProvider }
 type PresetsResponse = { presets: ProviderPreset[] }
 type TestResultResponse = { result: ProviderTestResult }
-type AuthStatusResponse = {
+export type AuthStatusResponse = {
   hasAuth: boolean
   source: 'dreamcoder-provider' | 'openai-oauth' | 'original-settings' | 'env' | 'none'
   activeProvider?: string

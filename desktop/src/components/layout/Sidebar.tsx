@@ -572,24 +572,6 @@ export function Sidebar({ isMobile = false, onRequestClose }: SidebarProps) {
     setRenameValue('')
   }, [renamingId, renameValue, renameSession])
 
-  const startDraggingRef = useRef<(() => Promise<void>) | null>(null)
-
-  useEffect(() => {
-    if (!isTauri) return
-    import('@tauri-apps/api/window')
-      .then(({ getCurrentWindow }) => {
-        const win = getCurrentWindow()
-        startDraggingRef.current = () => win.startDragging()
-      })
-      .catch(() => {})
-  }, [])
-
-  const handleSidebarDrag = useCallback((e: React.MouseEvent) => {
-    if (e.button !== 0) return
-    if ((e.target as HTMLElement).closest('button, input, textarea, select, a, [role="button"]')) return
-    startDraggingRef.current?.()
-  }, [])
-
   useEffect(() => {
     if (!isBatchMode) return
 
@@ -613,12 +595,11 @@ export function Sidebar({ isMobile = false, onRequestClose }: SidebarProps) {
 
   return (
     <aside
-      onMouseDown={handleSidebarDrag}
       className="sidebar-panel relative h-full flex flex-col bg-[var(--color-surface-sidebar)] border-r border-[var(--color-border)] select-none"
       data-state={expanded ? 'open' : 'closed'}
       aria-label="Sidebar"
     >
-      <div className={`px-3 pb-2 ${isTauri && !isWindows ? 'pt-[44px]' : 'pt-3'}`}>
+      <div className="px-3 pb-2 pt-3">
         <div className={`flex ${expanded ? 'items-center justify-between gap-3' : 'flex-col items-center gap-2'}`}>
           <div className={`flex min-w-0 items-center ${expanded ? 'gap-2.5' : 'justify-center'}`}>
             <DreamCoderIcon size={32} />

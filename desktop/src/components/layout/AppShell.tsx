@@ -23,6 +23,7 @@ import { ProviderOnboarding } from '../onboarding/ProviderOnboarding'
 import { useProviderStore } from '../../stores/providerStore'
 import { useMobileViewport } from '../../hooks/useMobileViewport'
 import type { Tab } from '../../stores/tabStore'
+import { providersApi, type AuthStatusResponse } from '../../api/providers'
 
 function isChatTab(tab: Tab | undefined) {
   return tab?.type === 'session'
@@ -32,6 +33,7 @@ export function AppShell() {
   const fetchSettings = useSettingsStore((s) => s.fetchAll)
   const onboardingCompleted = useSettingsStore((s) => s.onboardingCompleted)
   const { providers, hasLoadedProviders } = useProviderStore()
+  const fetchProviders = useProviderStore((s) => s.fetchProviders)
   const sidebarOpen = useUIStore((s) => s.sidebarOpen)
   const toggleSidebar = useUIStore((s) => s.toggleSidebar)
   const setSidebarOpen = useUIStore((s) => s.setSidebarOpen)
@@ -40,6 +42,7 @@ export function AppShell() {
   const [ready, setReady] = useState(false)
   const [startupError, setStartupError] = useState<string | null>(null)
   const [h5StartupError, setH5StartupError] = useState<H5ConnectionRequiredError | null>(null)
+  const [authStatus, setAuthStatus] = useState<AuthStatusResponse | null>(null)
   const [bootstrapNonce, setBootstrapNonce] = useState(0)
   const [mobileSidebarOpen, setMobileSidebarOpen] = useState(false)
   const t = useTranslation()
@@ -69,7 +72,13 @@ export function AppShell() {
       ? { 'aria-hidden': true, inert: '' }
       : {}
 
-  const showOnboarding = ready && !startupError && !h5StartupError && hasLoadedProviders && providers.length === 0 && !onboardingCompleted
+  const showOnboarding = ready &&
+    !startupError &&
+    !h5StartupError &&
+    hasLoadedProviders &&
+    providers.length === 0 &&
+    authStatus?.hasAuth !== true &&
+    !onboardingCompleted
 
   useEffect(() => {
     let cancelled = false
@@ -79,13 +88,22 @@ export function AppShell() {
         setReady(false)
         setStartupError(null)
         setH5StartupError(null)
+        setAuthStatus(null)
       }
 
       try {
         await initializeDesktopServerUrl()
-        await fetchSettings()
+        const [, , nextAuthStatus] = await Promise.all([
+          fetchSettings(),
+          fetchProviders(),
+          providersApi.authStatus().catch(() => ({
+            hasAuth: false,
+            source: 'none' as const,
+          })),
+        ])
 
         if (!cancelled) {
+          setAuthStatus(nextAuthStatus)
           setReady(true)
         }
 
@@ -117,7 +135,7 @@ export function AppShell() {
     return () => {
       cancelled = true
     }
-  }, [bootstrapNonce, fetchSettings, tauriRuntime])
+  }, [bootstrapNonce, fetchProviders, fetchSettings, tauriRuntime])
 
   // Listen for macOS native menu navigation events (About / Settings)
   useEffect(() => {

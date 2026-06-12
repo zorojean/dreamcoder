@@ -167,7 +167,12 @@ export class ConversationService {
     if (this.sessions.has(sessionId)) return
 
     const launchInfo = await sessionService.getSessionLaunchInfo(sessionId)
-    const shouldResume = !!launchInfo && launchInfo.transcriptMessageCount > 0
+    // Desktop keeps transcript history for display, but cold-started CLI
+    // subprocesses should not implicitly load that history. This avoids a
+    // hidden token spend when the user sends a fresh message in an old UI
+    // session. An explicit "continue with history" mode can opt into
+    // --resume later.
+    const shouldResume = false
     const shouldReplacePlaceholder =
       !!launchInfo && launchInfo.transcriptMessageCount === 0
     const shouldCreateWorktree =

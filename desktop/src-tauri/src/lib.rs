@@ -218,8 +218,10 @@ mod macos_notifications {
 }
 
 const SERVER_STARTUP_LOG_LIMIT: usize = 80;
-const SERVER_BIND_HOST: &str = "0.0.0.0";
+const SERVER_STARTUP_TIMEOUT_SECS: u64 = 30;
+const SERVER_BIND_HOST: &str = "127.0.0.1";
 const SERVER_CONTROL_HOST: &str = "127.0.0.1";
+const ADAPTER_SIDECARS_ENABLED: bool = false;
 const MAIN_WINDOW_LABEL: &str = "main";
 const TRAY_SHOW_ID: &str = "tray_show";
 const TRAY_QUIT_ID: &str = "tray_quit";
@@ -488,6 +490,10 @@ fn get_server_url(state: State<'_, ServerState>) -> Result<String, String> {
 /// 凭据缺失时 sidecar 自己会 warn + skip + 退出，所以这里不需要前置检查。
 #[tauri::command]
 fn restart_adapters_sidecar(app: AppHandle) -> Result<(), String> {
+    if !ADAPTER_SIDECARS_ENABLED {
+        eprintln!("[desktop] adapter sidecars are disabled in this build");
+        return Ok(());
+    }
     stop_adapters_sidecar(&app);
     spawn_and_track_adapters_sidecar(&app);
     Ok(())
@@ -1483,7 +1489,7 @@ fn wait_for_server(url_host: &str, port: u16) -> Result<(), String> {
     let addr: SocketAddr = format!("{url_host}:{port}")
         .parse()
         .map_err(|err| format!("parse server address: {err}"))?;
-    let deadline = Instant::now() + Duration::from_secs(10);
+    let deadline = Instant::now() + Duration::from_secs(SERVER_STARTUP_TIMEOUT_SECS);
 
     while Instant::now() < deadline {
         if TcpStream::connect_timeout(&addr, Duration::from_millis(200)).is_ok() {
@@ -1493,7 +1499,7 @@ fn wait_for_server(url_host: &str, port: u16) -> Result<(), String> {
     }
 
     Err(format!(
-        "desktop server did not start listening on {url_host}:{port} within 10 seconds"
+        "desktop server did not start listening on {url_host}:{port} within {SERVER_STARTUP_TIMEOUT_SECS} seconds"
     ))
 }
 
@@ -1575,6 +1581,7 @@ fn start_server_sidecar(app: &AppHandle) -> Result<ServerRuntime, String> {
     let port = reserve_local_port(bind_host)?;
     let url = format!("http://{control_host}:{port}");
     let app_root = resolve_app_root(app)?;
+    kill_stale_unix_server_sidecars(&app_root);
     let app_root_arg = app_root.to_string_lossy().to_string();
     let h5_dist_dir = resolve_h5_dist_dir(app, &app_root)
         .to_string_lossy()
@@ -1775,6 +1782,10 @@ fn start_adapters_sidecars(app: &AppHandle) -> Result<Vec<CommandChild>, String>
 /// spawn adapter sidecars 并把 child handles 存进 AdapterState。
 /// 在启动 + 重启路径里复用，集中处理"无法 spawn"的日志。
 fn spawn_and_track_adapters_sidecar(app: &AppHandle) {
+    if !ADAPTER_SIDECARS_ENABLED {
+        return;
+    }
+
     match start_adapters_sidecars(app) {
         Ok(children) => {
             if let Some(state) = app.try_state::<AdapterState>() {
@@ -1800,6 +1811,69 @@ fn stop_adapters_sidecar(app: &AppHandle) {
         let _ = child.kill();
     }
 }
+
+#[cfg(unix)]
+fn kill_stale_unix_server_sidecars(app_root: &Path) {
+    let current_pid = std::process::id();
+    let Ok(output) = StdCommand::new("ps")
+        .args(["-axo", "pid=,ppid=,command="])
+        .stdout(Stdio::piped())
+        .stderr(Stdio::null())
+        .output()
+    else {
+        return;
+    };
+
+    let stdout = String::from_utf8_lossy(&output.stdout);
+    for line in stdout.lines() {
+        let Some(pid) = stale_unix_server_sidecar_pid(line, current_pid, app_root) else {
+            continue;
+        };
+
+        let _ = StdCommand::new("kill")
+            .arg(pid.to_string())
+            .stdout(Stdio::null())
+            .stderr(Stdio::null())
+            .status();
+    }
+}
+
+#[cfg(unix)]
+fn stale_unix_server_sidecar_pid(line: &str, current_pid: u32, app_root: &Path) -> Option<u32> {
+    let line = line.trim_start();
+    let (pid_text, rest) = split_first_ps_field(line)?;
+    let (ppid_text, command) = split_first_ps_field(rest.trim_start())?;
+    let pid = pid_text.parse::<u32>().ok()?;
+    let ppid = ppid_text.parse::<u32>().ok()?;
+
+    if pid == current_pid || ppid == current_pid || ppid != 1 {
+        return None;
+    }
+    if !command.contains("dreamcoder-sidecar") {
+        return None;
+    }
+    if !command.split_whitespace().any(|part| part == "server") {
+        return None;
+    }
+
+    let app_root_text = app_root.to_string_lossy();
+    if !command.contains(&format!("--app-root {}", app_root_text.as_ref())) {
+        return None;
+    }
+
+    Some(pid)
+}
+
+#[cfg(unix)]
+fn split_first_ps_field(line: &str) -> Option<(&str, &str)> {
+    let split_at = line.find(char::is_whitespace)?;
+    let field = &line[..split_at];
+    let rest = &line[split_at..];
+    Some((field, rest))
+}
+
+#[cfg(not(unix))]
+fn kill_stale_unix_server_sidecars(_app_root: &Path) {}
 
 #[cfg(unix)]
 fn kill_stale_unix_adapter_sidecars() {
@@ -1860,6 +1934,10 @@ mod tests {
         SERVER_BIND_HOST, SERVER_CONTROL_HOST,
     };
     use std::{collections::HashMap, fs};
+    #[cfg(unix)]
+    use super::stale_unix_server_sidecar_pid;
+    #[cfg(unix)]
+    use std::path::PathBuf;
 
     #[test]
     fn window_state_rejects_too_small_sizes() {
@@ -2110,9 +2188,35 @@ mod tests {
     }
 
     #[test]
-    fn server_sidecar_binds_lan_but_reports_loopback_control_url() {
-        assert_eq!(SERVER_BIND_HOST, "0.0.0.0");
+    fn server_sidecar_binds_loopback_and_reports_loopback_control_url() {
+        assert_eq!(SERVER_BIND_HOST, "127.0.0.1");
         assert_eq!(SERVER_CONTROL_HOST, "127.0.0.1");
+    }
+
+    #[cfg(unix)]
+    #[test]
+    fn stale_server_sidecar_parser_handles_ps_spacing() {
+        let app_root = PathBuf::from("/tmp/dreamcoder target/debug");
+        let line = concat!(
+            "25098     1 ",
+            "/tmp/dreamcoder target/debug/dreamcoder-sidecar server ",
+            "--app-root /tmp/dreamcoder target/debug --host 127.0.0.1 --port 63752"
+        );
+
+        assert_eq!(stale_unix_server_sidecar_pid(line, 42, &app_root), Some(25098));
+    }
+
+    #[cfg(unix)]
+    #[test]
+    fn stale_server_sidecar_parser_keeps_live_or_foreign_sidecars() {
+        let app_root = PathBuf::from("/tmp/current");
+        let live_child = "25098 42 /tmp/current/dreamcoder-sidecar server --app-root /tmp/current --port 1";
+        let foreign = "25099 1 /tmp/other/dreamcoder-sidecar server --app-root /tmp/other --port 2";
+        let adapter = "25100 1 /tmp/current/dreamcoder-sidecar adapters --app-root /tmp/current --telegram";
+
+        assert_eq!(stale_unix_server_sidecar_pid(live_child, 42, &app_root), None);
+        assert_eq!(stale_unix_server_sidecar_pid(foreign, 42, &app_root), None);
+        assert_eq!(stale_unix_server_sidecar_pid(adapter, 42, &app_root), None);
     }
 
     #[test]

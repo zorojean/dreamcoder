@@ -168,6 +168,7 @@ export function GeneralSettings() {
     RESPONSE_LANGUAGES.find(({ value }) => value === responseLanguage)?.label ?? RESPONSE_LANGUAGES[0]!.label
 
   const THEMES: Array<{ value: ThemeMode; label: string }> = [
+    { value: 'system', label: t('settings.general.appearance.system') },
     { value: 'white', label: t('settings.general.appearance.white') },
     { value: 'light', label: t('settings.general.appearance.light') },
     { value: 'dark', label: t('settings.general.appearance.dark') },
@@ -481,13 +482,14 @@ export function GeneralSettings() {
       {/* Appearance selector */}
       <h2 className="text-base font-semibold text-[var(--color-text-primary)] mb-1">{t('settings.general.appearanceTitle')}</h2>
       <p className="text-sm text-[var(--color-text-tertiary)] mb-3">{t('settings.general.appearanceDescription')}</p>
-      <div className="flex gap-2 mb-8">
+      <div className="mb-8 grid grid-cols-2 gap-2 sm:grid-cols-3">
         {THEMES.map(({ value, label }) => (
           <button
             key={value}
+            type="button"
             onClick={() => void setTheme(value)}
             aria-pressed={theme === value}
-            className={`flex-1 py-2 text-xs font-semibold rounded-lg border transition-all ${
+            className={`min-h-9 px-2 py-2 text-xs font-semibold rounded-lg border transition-all ${
               theme === value
                 ? 'bg-[image:var(--gradient-btn-primary)] text-[var(--color-btn-primary-fg)] border-transparent shadow-[var(--shadow-button-primary)]'
                 : 'border-[var(--color-border)] text-[var(--color-text-secondary)] hover:bg-[var(--color-surface-hover)]'

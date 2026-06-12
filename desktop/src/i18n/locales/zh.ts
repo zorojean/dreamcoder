@@ -844,7 +844,8 @@ export const zh: Record<TranslationKey, string> = {
 
   // Settings > General
   'settings.general.appearanceTitle': '配色主题',
-  'settings.general.appearanceDescription': '在经典暖色、暗色与纯白工作区之间切换。',
+  'settings.general.appearanceDescription': '跟随系统外观，或手动选择纯白、经典暖色与暗色主题。',
+  'settings.general.appearance.system': '跟随系统',
   'settings.general.appearance.light': '经典暖色',
   'settings.general.appearance.dark': '暗色',
   'settings.general.appearance.dreamfield': 'DreamField 翡翠',

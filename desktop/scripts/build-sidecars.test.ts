@@ -7,13 +7,21 @@ function readBuildScript() {
   return readFileSync(path.resolve(import.meta.dirname, 'build-sidecars.ts'), 'utf8')
 }
 
-function extractWindowsX64BunTarget(source: string) {
-  const match = source.match(/case 'x86_64-pc-windows-msvc':[\s\S]*?return '([^']+)'/)
+function extractBunTargetForTriple(source: string, triple: string) {
+  const match = source.match(new RegExp(`case '${triple}':[\\s\\S]*?return '([^']+)'`))
   return match?.[1] ?? null
 }
 
-describe('build-sidecars Windows x64 target mapping', () => {
-  it('uses the baseline Bun runtime so older CPUs do not crash with Illegal Instruction', () => {
-    expect(extractWindowsX64BunTarget(readBuildScript())).toBe('bun-windows-x64-baseline')
+describe('build-sidecars x64 target mappings', () => {
+  it('uses the baseline Bun runtime on macOS x64 so older CPUs do not crash with Illegal Instruction', () => {
+    expect(extractBunTargetForTriple(readBuildScript(), 'x86_64-apple-darwin')).toBe(
+      'bun-darwin-x64-baseline',
+    )
+  })
+
+  it('uses the baseline Bun runtime on Windows x64 so older CPUs do not crash with Illegal Instruction', () => {
+    expect(extractBunTargetForTriple(readBuildScript(), 'x86_64-pc-windows-msvc')).toBe(
+      'bun-windows-x64-baseline',
+    )
   })
 })

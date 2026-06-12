@@ -119,8 +119,9 @@ function buildProviderChoices(
   // Only show official providers when there's NO active custom provider
   // (i.e., user is using official Claude or OpenAI directly)
   const showOfficialProviders = !activeId || activeId === OPENAI_OFFICIAL_PROVIDER_ID
+  const hasStandaloneModels = activeId === null && providers.length === 0 && availableModels.length > 0
 
-  if (showOfficialProviders && claudeOfficialLoggedIn) {
+  if (showOfficialProviders && (claudeOfficialLoggedIn || hasStandaloneModels)) {
     choices.push(officialChoices(null, claudeOfficialModels, activeId === null, officialName))
   }
   if (showOfficialProviders && openAIOfficialLoggedIn) {

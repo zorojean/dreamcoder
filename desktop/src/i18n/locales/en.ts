@@ -842,7 +842,8 @@ export const en = {
 
   // Settings > General
   'settings.general.appearanceTitle': 'Appearance',
-  'settings.general.appearanceDescription': 'Switch between the warm classic workspace, dark workspace, and a pure white workspace.',
+  'settings.general.appearanceDescription': 'Follow the system appearance, or choose the pure white, warm classic, and dark themes manually.',
+  'settings.general.appearance.system': 'Follow System',
   'settings.general.appearance.light': 'Warm Classic',
   'settings.general.appearance.dark': 'Dark',
   'settings.general.appearance.dreamfield': 'DreamField Emerald',

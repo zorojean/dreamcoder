@@ -7,8 +7,9 @@ import {
   handleWebSocket,
   type WebSocketData,
 } from '../ws/handler.js'
-import { conversationService } from '../services/conversationService.js'
+import { ConversationStartupError, conversationService } from '../services/conversationService.js'
 import { computerUseApprovalService } from '../services/computerUseApprovalService.js'
+import { sessionService } from '../services/sessionService.js'
 
 function makeClientSocket(sessionId: string) {
   const sent: string[] = []
@@ -27,6 +28,20 @@ function makeClientSocket(sessionId: string) {
     close: mock(() => {}),
     sent,
   } as unknown as ServerWebSocket<WebSocketData> & { sent: string[] }
+}
+
+async function waitForSentMessage(
+  ws: { sent: string[] },
+  predicate: (message: unknown) => boolean,
+): Promise<unknown> {
+  for (let attempt = 0; attempt < 100; attempt += 1) {
+    for (const payload of ws.sent) {
+      const message = JSON.parse(payload)
+      if (predicate(message)) return message
+    }
+    await new Promise((resolve) => setTimeout(resolve, 1))
+  }
+  throw new Error(`Timed out waiting for sent message. Sent: ${ws.sent.join('\n')}`)
 }
 
 describe('WebSocket handler session isolation', () => {
@@ -134,5 +149,52 @@ describe('WebSocket handler session isolation', () => {
 
     expect(setTimeoutSpy).toHaveBeenCalled()
     expect(setTimeoutSpy.mock.calls[0]?.[1]).toBeGreaterThan(30_000)
+  })
+
+  it('sends a visible error when session prewarm startup fails', async () => {
+    const sessionId = crypto.randomUUID()
+    const ws = makeClientSocket(sessionId)
+    spyOn(conversationService, 'hasSession').mockReturnValue(false)
+    spyOn(conversationService, 'startSession').mockRejectedValue(
+      new ConversationStartupError(
+        'No conversation found with session ID: ' + sessionId,
+        'CLI_START_FAILED',
+      ),
+    )
+
+    handleWebSocket.open(ws)
+    handleWebSocket.message(ws, JSON.stringify({ type: 'prewarm_session' }))
+
+    await expect(waitForSentMessage(ws, (message) =>
+      !!message &&
+      typeof message === 'object' &&
+      (message as { type?: unknown }).type === 'error',
+    )).resolves.toEqual({
+      type: 'error',
+      message: 'No conversation found with session ID: ' + sessionId,
+      code: 'CLI_START_FAILED',
+      retryable: false,
+    })
+  })
+
+  it('does not prewarm historical transcript sessions', async () => {
+    const sessionId = crypto.randomUUID()
+    const ws = makeClientSocket(sessionId)
+    spyOn(conversationService, 'hasSession').mockReturnValue(false)
+    const startSession = spyOn(conversationService, 'startSession').mockResolvedValue()
+    spyOn(sessionService, 'getSessionLaunchInfo').mockResolvedValue({
+      filePath: '/tmp/session.jsonl',
+      projectDir: process.cwd(),
+      workDir: process.cwd(),
+      worktreeSession: null,
+      transcriptMessageCount: 2,
+      customTitle: null,
+    })
+
+    handleWebSocket.open(ws)
+    handleWebSocket.message(ws, JSON.stringify({ type: 'prewarm_session' }))
+    await new Promise((resolve) => setTimeout(resolve, 5))
+
+    expect(startSession).not.toHaveBeenCalled()
   })
 })

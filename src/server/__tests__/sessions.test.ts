@@ -1603,6 +1603,29 @@ describe('SessionService', () => {
     expect(launchInfo!.customTitle).toBeNull()
   })
 
+  it('should treat system-only transcripts as non-resumable placeholders', async () => {
+    const sessionId = 'aaaaaaaa-bbbb-cccc-dddd-eeeeeeeeeeee'
+    await writeSessionFile('-tmp-project', sessionId, [
+      makeSnapshotEntry(),
+      makeSessionMetaEntry('/tmp/project'),
+      {
+        type: 'system',
+        subtype: 'init',
+        message: {
+          role: 'system',
+          content: 'init',
+        },
+        uuid: crypto.randomUUID(),
+        timestamp: '2026-01-01T00:00:10.000Z',
+      },
+    ])
+
+    const launchInfo = await service.getSessionLaunchInfo(sessionId)
+    expect(launchInfo).not.toBeNull()
+    expect(launchInfo!.workDir).toBe('/tmp/project')
+    expect(launchInfo!.transcriptMessageCount).toBe(0)
+  })
+
   it('should detect resumable launch info for transcript sessions', async () => {
     const sessionId = 'aaaaaaaa-bbbb-cccc-dddd-eeeeeeeeeeee'
     const userUuid = crypto.randomUUID()

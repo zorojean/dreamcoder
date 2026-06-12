@@ -82,10 +82,14 @@ describe('ModelSelector', () => {
 
   it('selects provider-scoped runtime models and mirrors session selections', async () => {
     const setSessionRuntime = vi.fn()
+    const providerModels: ModelInfo[] = [
+      { id: 'provider-main', name: 'provider-main', description: 'Main model', context: '' },
+      { id: 'provider-fast', name: 'provider-fast', description: 'Haiku model', context: '' },
+    ]
     useSettingsStore.setState({
       locale: 'en',
-      availableModels: MODELS,
-      currentModel: MODELS[0],
+      availableModels: providerModels,
+      currentModel: providerModels[0],
       activeProviderName: 'Provider A',
     })
     useProviderStore.setState({
@@ -113,7 +117,7 @@ describe('ModelSelector', () => {
 
     render(<ModelSelector runtimeKey="session-1" />)
 
-    await clickByRole(/alpha/i)
+    await clickByRole(/provider-main/i)
     await act(async () => {
       fireEvent.click(screen.getByRole('button', { name: /provider-fast/ }))
       await Promise.resolve()
@@ -181,6 +185,32 @@ describe('ModelSelector', () => {
       providerId: OPENAI_OFFICIAL_PROVIDER_ID,
       modelId: 'gpt-5.5',
     })
+  })
+
+  it('shows standalone models when no provider is configured', async () => {
+    useProviderOAuthStore.setState({ status: { loggedIn: false }, fetchStatus: async () => {} })
+    useProviderOpenAIOAuthStore.setState({ status: { loggedIn: false }, fetchStatus: async () => {} })
+    useSettingsStore.setState({
+      locale: 'en',
+      availableModels: MODELS,
+      currentModel: MODELS[0],
+      activeProviderName: null,
+    })
+    useProviderStore.setState({
+      providers: [],
+      activeId: null,
+      hasLoadedProviders: true,
+      isLoading: false,
+    })
+
+    render(<ModelSelector runtimeKey="draft" />)
+
+    await clickByRole(/alpha/i)
+
+    const dropdown = screen.getByTestId('model-selector-dropdown')
+    expect(dropdown.textContent).toContain('Claude Official')
+    expect(dropdown.textContent).toContain('Alpha')
+    expect(dropdown.textContent).toContain('Beta')
   })
 
   it('hides official provider sections when OAuth is not logged in', async () => {

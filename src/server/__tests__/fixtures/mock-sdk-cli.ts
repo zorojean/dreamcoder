@@ -24,6 +24,7 @@ function extractUserText(message: any): string {
 
 const sdkUrl = getArg('--sdk-url')
 const sessionId = getArg('--session-id') || crypto.randomUUID()
+const resumeSessionId = getArg('--resume')
 const initMode = process.env.MOCK_SDK_INIT_MODE || 'on_open'
 const initDelayMs = Number(process.env.MOCK_SDK_INIT_DELAY_MS || '0')
 const streamDelayMs = Number(process.env.MOCK_SDK_STREAM_DELAY_MS || '0')
@@ -37,6 +38,11 @@ let firstUserExitScheduled = false
 
 if (!sdkUrl) {
   console.error('Missing --sdk-url')
+  process.exit(1)
+}
+
+if (process.env.MOCK_SDK_FAIL_ON_RESUME === '1' && resumeSessionId) {
+  console.error(`Unexpected --resume ${resumeSessionId}`)
   process.exit(1)
 }
 

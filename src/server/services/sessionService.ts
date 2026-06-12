@@ -376,7 +376,7 @@ export class SessionService {
     return entries.filter((entry) =>
       !entry.isMeta &&
       !!entry.message?.role &&
-      (entry.type === 'user' || entry.type === 'assistant' || entry.type === 'system')
+      (entry.type === 'user' || entry.type === 'assistant')
     ).length
   }
 

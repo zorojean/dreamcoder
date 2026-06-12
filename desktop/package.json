@@ -16,7 +16,8 @@
   },
   "homepage": "https://github.com/GoDiao/dreamcoder#readme",
   "scripts": {
-    "dev": "vite",
+    "dev": "tauri dev",
+    "dev:vite": "vite",
     "build": "vite build",
     "build:sidecars": "bun run ./scripts/build-sidecars.ts",
     "build:macos-arm64": "bash ./scripts/build-macos-arm64.sh",

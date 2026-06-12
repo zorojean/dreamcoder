@@ -426,6 +426,10 @@ async function handlePrewarmSession(ws: ServerWebSocket<WebSocketData>) {
   }
 
   const launchInfo = await sessionService.getSessionLaunchInfo(sessionId).catch(() => null)
+  if (launchInfo && launchInfo.transcriptMessageCount > 0) {
+    console.log(`[WS] Skipping prewarm for historical session ${sessionId}`)
+    return
+  }
   if (launchInfo?.repository) {
     console.log(`[WS] Skipping prewarm for pending repository launch session ${sessionId}`)
     return
@@ -440,6 +444,17 @@ async function handlePrewarmSession(ws: ServerWebSocket<WebSocketData>) {
     })
     .catch((err) => {
       prewarmPendingSessions.delete(sessionId)
+      sendMessage(ws, {
+        type: 'error',
+        message: err instanceof Error ? err.message : String(err),
+        code:
+          err instanceof ConversationStartupError
+            ? err.code
+            : 'CLI_PREWARM_FAILED',
+        retryable:
+          err instanceof ConversationStartupError ? err.retryable : false,
+      })
+      sendMessage(ws, { type: 'status', state: 'idle' })
       console.warn(
         `[WS] Prewarm failed for ${sessionId}: ${
           err instanceof Error ? err.message : String(err)
